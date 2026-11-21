@@ -124,7 +124,7 @@ BEGIN
     BEGIN
         MENUITEM "Use AVFoundation",            IDM_AVFOUNDATION, CHECKED
         MENUITEM "Use Accelerated Compositing", IDM_ACC_COMPOSITING, CHECKED
-        MENUITEM "Enable WebKit Full Screen",   IDM_WK_FULLSCREEN, CHECKED
+        MENUITEM "Enable Full Screen",          IDM_WK_FULLSCREEN, CHECKED
         MENUITEM SEPARATOR
         MENUITEM "Show Compositing Borders",    IDM_COMPOSITING_BORDERS
         MENUITEM "Show Tiled Drawing indicator", IDM_DEBUG_INFO_LAYER
@@ -167,8 +167,8 @@ CAPTION "About"
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     ICON            IDI_MINIBROWSER,IDC_MYICON,14,9,20,20
-    LTEXT           "MiniBrowser Version 1.1",IDC_STATIC,49,10,119,8
-    LTEXT           "Copyright (C) 2015-2019",IDC_STATIC,49,20,119,8
+    LTEXT           "GootWeb Version 1.0",IDC_STATIC,49,10,119,8
+    LTEXT           "Copyright (C) StartPOZI",IDC_STATIC,49,20,119,8
     DEFPUSHBUTTON   "OK",IDOK,186,10,30,11,WS_GROUP
 END
 
@@ -418,7 +418,7 @@ IDB_TOOLBAR             BITMAP                  "toolbar.bmp"
 
 STRINGTABLE
 BEGIN
-    IDS_APP_TITLE           "MiniBrowser"
+    IDS_APP_TITLE           "GootWeb"
     IDC_MINIBROWSER         "MINIBROWSER"
 END
 

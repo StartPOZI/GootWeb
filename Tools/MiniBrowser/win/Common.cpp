@@ -242,7 +242,6 @@ bool askServerTrustEvaluation(HWND hwnd, const std::wstring& text)
         ServerTrustEvaluationDialog(const std::wstring& text)
             : m_text { text }
         {
-            SendMessage(GetDlgItem(this->hDlg(), IDC_SERVER_TRUST_TEXT), WM_SETFONT, (WPARAM)GetStockObject(ANSI_FIXED_FONT), TRUE);
         }
 
     protected:
@@ -251,6 +250,7 @@ bool askServerTrustEvaluation(HWND hwnd, const std::wstring& text)
         void setup()
         {
             setText(IDC_SERVER_TRUST_TEXT, m_text);
+            SendMessage(GetDlgItem(hDlg(), IDC_SERVER_TRUST_TEXT), WM_SETFONT, (WPARAM)GetStockObject(ANSI_FIXED_FONT), TRUE);
         }
 
         void ok() final

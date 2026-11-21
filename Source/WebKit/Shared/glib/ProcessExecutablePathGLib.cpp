@@ -65,30 +65,18 @@ static String findWebKitProcess(const ASCIILiteral processName)
 
 String executablePathOfWebProcess()
 {
-#if PLATFORM(WPE)
-    return findWebKitProcess("WPEWebProcess"_s);
-#else
-    return findWebKitProcess("WebKitWebProcess"_s);
-#endif
+    return findWebKitProcess("GootWebWebProcess"_s);
 }
 
 String executablePathOfNetworkProcess()
 {
-#if PLATFORM(WPE)
-    return findWebKitProcess("WPENetworkProcess"_s);
-#else
-    return findWebKitProcess("WebKitNetworkProcess"_s);
-#endif
+    return findWebKitProcess("GootWebNetworkProcess"_s);
 }
 
 #if ENABLE(GPU_PROCESS)
 String executablePathOfGPUProcess()
 {
-#if PLATFORM(WPE)
-    return findWebKitProcess("WPEGPUProcess"_s);
-#else
-    return findWebKitProcess("WebKitGPUProcess"_s);
-#endif
+    return findWebKitProcess("GootWebGPUProcess"_s);
 }
 #endif
 

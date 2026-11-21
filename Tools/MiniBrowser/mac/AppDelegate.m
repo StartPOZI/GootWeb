@@ -764,7 +764,7 @@ static NSNumber *_currentBadge;
 
 - (NSString *)browserNameForAutomationConnection:(AutomationConnection *)connection
 {
-    return @"MiniBrowser";
+    return @"GootWeb";
 }
 
 - (NSString *)browserVersionForAutomationConnection:(AutomationConnection *)connection

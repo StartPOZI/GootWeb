@@ -107,9 +107,13 @@ static void searchEntryMenuIconPressedCallback(BrowserSearchBox *searchBox, GtkE
         return;
 
 #if GTK_CHECK_VERSION(3, 98, 5)
+    g_clear_pointer(&searchBox->optionsPopover, gtk_widget_unparent);
     GtkWidget *popover = gtk_popover_menu_new_from_model(G_MENU_MODEL(searchBox->optionsMenu));
     gtk_widget_set_parent(popover, GTK_WIDGET(searchBox));
 #else
+    if (searchBox->optionsPopover)
+        gtk_popover_set_relative_to(GTK_POPOVER(searchBox->optionsPopover), NULL);
+
     GtkWidget *popover = gtk_popover_menu_new();
     gtk_popover_bind_model(GTK_POPOVER(popover), G_MENU_MODEL(searchBox->optionsMenu), NULL);
     gtk_popover_set_relative_to(GTK_POPOVER(popover), searchBox->entry);

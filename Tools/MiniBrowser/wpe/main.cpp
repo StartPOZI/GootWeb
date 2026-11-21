@@ -27,6 +27,8 @@
 
 #include "BrowserLoggingInputMethodContext.h"
 #include "BuildRevision.h"
+
+#define GOOTWEB_VERSION "1.0"
 #include <glib-unix.h>
 #include <memory>
 #include <wpe/webkit.h>
@@ -68,7 +70,7 @@ static const char* proxy;
 const char* bgColor;
 static char* timeZone;
 static const char* featureList = nullptr;
-static gboolean enableITP;
+static gboolean disableITP;
 static gboolean printVersion;
 static guint windowWidth = 0;
 static guint windowHeight = 0;
@@ -84,7 +86,7 @@ static const char* configFile;
 #if defined(USE_LIBWPE) && USE_LIBWPE
 static gboolean useLegacyAPI;
 #endif
-static const char* defaultWindowTitle = "WPEWebKit MiniBrowser";
+static const char* defaultWindowTitle = "GootWeb";
 #endif
 
 static gboolean parseWindowSize(const char*, const char* value, gpointer, GError** error)
@@ -123,7 +125,7 @@ static gboolean parseWindowSize(const char*, const char* value, gpointer, GError
 static const GOptionEntry commandLineOptions[] =
 {
     { "headless", 'h', 0, G_OPTION_ARG_NONE, &headlessMode, "Run in headless mode", nullptr },
-    { "log-input-method", 0, 0, G_OPTION_ARG_NONE, &logInputMethod, "Log what WebKit reports to the input method. Disables composition", nullptr },
+    { "log-input-method", 0, 0, G_OPTION_ARG_NONE, &logInputMethod, "Log what the engine reports to the input method. Disables composition", nullptr },
     { "private", 'p', 0, G_OPTION_ARG_NONE, &privateMode, "Run in private browsing mode", nullptr },
     { "profile-dir", 0, 0, G_OPTION_ARG_FILENAME, &profileDirectory, "Custom profile directory to store session data", "DIR" },
     { "automation", 0, 0, G_OPTION_ARG_NONE, &automationMode, "Run in automation mode", nullptr },
@@ -136,9 +138,9 @@ static const GOptionEntry commandLineOptions[] =
     { "user-script-at-start", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &userScriptsAtDocumentStart, "Inject one or more user scripts at document start.", "PATH" },
     { "user-script-at-end", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &userScriptsAtDocumentEnd, "Inject one or more user scripts at document end.", "PATH" },
     { "bg-color", 0, 0, G_OPTION_ARG_STRING, &bgColor, "Window background color. Default: white", "COLOR" },
-    { "enable-itp", 0, 0, G_OPTION_ARG_NONE, &enableITP, "Enable Intelligent Tracking Prevention (ITP)", nullptr },
+    { "disable-itp", 0, 0, G_OPTION_ARG_NONE, &disableITP, "Disable Intelligent Tracking Prevention (ITP)", nullptr },
     { "time-zone", 't', 0, G_OPTION_ARG_STRING, &timeZone, "Set time zone", "TIMEZONE" },
-    { "features", 'F', 0, G_OPTION_ARG_STRING, &featureList, "Enable or disable WebKit features (hint: pass 'help' for a list)", "FEATURE-LIST" },
+    { "features", 'F', 0, G_OPTION_ARG_STRING, &featureList, "Enable or disable engine features (hint: pass 'help' for a list)", "FEATURE-LIST" },
     { "maximized", 'm', 0, G_OPTION_ARG_NONE, &windowMaximized, "Start with maximized window", nullptr },
     { "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &windowFullscreen, "Start with fullscreen window", nullptr },
 #if ENABLE_WPE_PLATFORM
@@ -148,7 +150,7 @@ static const GOptionEntry commandLineOptions[] =
 #endif
     { "config-file", 0, 0, G_OPTION_ARG_FILENAME, &configFile, "Config file to load for settings", "FILE" },
     { "size", 's', 0, G_OPTION_ARG_CALLBACK, reinterpret_cast<gpointer>(parseWindowSize), "Specify the window size to use, e.g. --size=\"800x600\"", nullptr },
-    { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the WPE version", nullptr },
+    { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the GootWeb version", nullptr },
     { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &uriArguments, nullptr, "[URL]" },
     { nullptr, 0, 0, G_OPTION_ARG_NONE, nullptr, nullptr, nullptr }
 };
@@ -300,15 +302,9 @@ static void displayDisconnected(WPEDisplay*, GError* error)
 
 static gboolean decidePermissionRequest(WebKitWebView *, WebKitPermissionRequest *request, gpointer)
 {
-    g_print("Accepting %s request\n", G_OBJECT_TYPE_NAME(request));
+    g_print("Denying %s request\n", G_OBJECT_TYPE_NAME(request));
 
-    if (WEBKIT_IS_XR_PERMISSION_REQUEST(request)) {
-        WebKitXRPermissionRequest* xrRequest = WEBKIT_XR_PERMISSION_REQUEST(request);
-        /* Grant all optional features */
-        webkit_xr_permission_request_set_granted_optional_features(xrRequest, webkit_xr_permission_request_get_consent_optional_features(xrRequest));
-    }
-
-    webkit_permission_request_allow(request);
+    webkit_permission_request_deny(request);
 
     return TRUE;
 }
@@ -442,6 +438,7 @@ static WebKitWebView* createWebViewForAutomationCallback(WebKitAutomationSession
     auto* newWebView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
         "settings", webkit_web_view_get_settings(view),
         "web-context", webkit_web_view_get_context(view),
+        "network-session", webkit_web_view_get_network_session(view),
         "display", webkit_web_view_get_display(view),
         "is-controlled-by-automation", TRUE,
         "user-content-manager", webkit_web_view_get_user_content_manager(view),
@@ -533,7 +530,7 @@ static void activate(GApplication* application, gpointer)
         } else
             networkSession = webkit_network_session_new(nullptr, nullptr);
 
-        webkit_network_session_set_itp_enabled(networkSession, enableITP);
+        webkit_network_session_set_itp_enabled(networkSession, !disableITP);
 
         if (proxy) {
             auto* webkitProxySettings = webkit_network_proxy_settings_new(proxy, ignoreHosts);
@@ -749,7 +746,7 @@ static void activate(GApplication* application, gpointer)
         webkit_web_view_load_uri(webView, url);
         g_free(url);
     } else if (!automationMode)
-        webkit_web_view_load_uri(webView, "https://wpewebkit.org");
+        webkit_web_view_load_uri(webView, "about:blank");
 
     g_object_unref(webContext);
     g_clear_object(&networkSession);
@@ -780,7 +777,8 @@ int main(int argc, char *argv[])
     g_option_context_free(context);
 
     if (printVersion) {
-        g_print("WPE WebKit %u.%u.%u",
+        g_print("GootWeb %s (WebKit %u.%u.%u)",
+            GOOTWEB_VERSION,
             webkit_get_major_version(),
             webkit_get_minor_version(),
             webkit_get_micro_version());
@@ -841,7 +839,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    GApplication* application = g_application_new("org.wpewebkit.MiniBrowser", G_APPLICATION_NON_UNIQUE);
+    GApplication* application = g_application_new("com.startpozi.GootWeb", G_APPLICATION_NON_UNIQUE);
 #if defined(USE_LIBWPE) && USE_LIBWPE
     g_signal_connect(application, "activate", G_CALLBACK(activate), backend.release());
 #else

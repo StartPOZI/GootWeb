@@ -60,8 +60,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPWSTR, _
 
     auto factory = WebKitBrowserWindow::create;
     auto& mainWindow = MainWindow::create().leakRef();
-    HRESULT hr = mainWindow.init(factory, hInst, options.usesLayeredWebView);
-    if (FAILED(hr))
+    if (!mainWindow.init(factory, hInst, options.usesLayeredWebView))
         goto exit;
 
     ShowWindow(mainWindow.hwnd(), nCmdShow);

@@ -290,7 +290,7 @@ static void browser_settings_dialog_init(BrowserSettingsDialog *dialog)
 #if !GTK_CHECK_VERSION(3, 98, 5)
     gtk_window_set_type_hint(GTK_WINDOW(dialog), GDK_WINDOW_TYPE_HINT_DIALOG);
 #endif
-    gtk_window_set_title(GTK_WINDOW(dialog), "WebKit Settings");
+    gtk_window_set_title(GTK_WINDOW(dialog), "GootWeb Settings");
     gtk_window_set_destroy_with_parent(GTK_WINDOW(dialog), TRUE);
 
     /* Settings list */

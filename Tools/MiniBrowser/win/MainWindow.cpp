@@ -35,7 +35,7 @@ namespace WebCore {
 float deviceScaleFactorForWindow(HWND);
 }
 
-static const wchar_t* kMiniBrowserRegistryKey = L"Software\\WebKit\\MiniBrowser";
+static const wchar_t* kMiniBrowserRegistryKey = L"Software\\GootWeb";
 
 static constexpr int kToolbarImageSize = 32;
 static constexpr int kToolbarURLBarIndex = 4;
@@ -305,7 +305,10 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
             break;
         case IDM_NEW_WEBKIT_WINDOW: {
             auto& newWindow = MainWindow::create().leakRef();
-            newWindow.init(WebKitBrowserWindow::create, hInst);
+            if (!newWindow.init(WebKitBrowserWindow::create, hInst)) {
+                newWindow.deref();
+                break;
+            }
             ShowWindow(newWindow.hwnd(), SW_SHOW);
             break;
         }
@@ -380,6 +383,8 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
         }
         break;
     case WM_DESTROY:
+        if (::IsWindow(thisWindow->m_hCacheWnd))
+            ::DestroyWindow(thisWindow->m_hCacheWnd);
         SetWindowLongPtr(hWnd, GWLP_USERDATA, 0);
         thisWindow->deref();
         if (s_numInstances > 1)
@@ -590,7 +595,9 @@ void MainWindow::loadURL(std::wstring url)
         if (SUCCEEDED(::UrlCreateFromPath(url.c_str(), fileURL, &fileURLLength, 0)))
             url = fileURL;
     }
-    if (url.find(L"://") == url.npos)
+    size_t firstSlash = url.find(L'/');
+    size_t colon = url.find(L':');
+    if (colon == url.npos || (firstSlash != url.npos && colon > firstSlash))
         url = L"http://" + url;
 
     if (FAILED(m_browserWindow->loadURL(_bstr_t(url.c_str()))))
@@ -601,7 +608,7 @@ void MainWindow::loadURL(std::wstring url)
 
 void MainWindow::goHome()
 {
-    std::wstring defaultURL = L"https://www.webkit.org/";
+    std::wstring defaultURL = L"about:blank";
     wchar_t url[INTERNET_MAX_URL_LENGTH];
     DWORD urlLength = sizeof(url);
     if (!RegGetValue(HKEY_CURRENT_USER, kMiniBrowserRegistryKey, L"DefaultURL", RRF_RT_REG_SZ, nullptr, &url, &urlLength))

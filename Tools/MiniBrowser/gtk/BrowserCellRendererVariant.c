@@ -176,7 +176,7 @@ static void browserCellRendererVariantCellRendererSpinEdited(BrowserCellRenderer
     if (!G_VALUE_HOLDS_UINT(renderer->value))
         return;
 
-    GtkAdjustment *adjustment;
+    g_autoptr(GtkAdjustment) adjustment = NULL;
     g_object_get(G_OBJECT(renderer->spinRenderer), "adjustment", &adjustment, NULL);
     if (!adjustment)
         return;

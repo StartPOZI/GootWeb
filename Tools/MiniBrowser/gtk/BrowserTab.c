@@ -172,8 +172,14 @@ static void loadChanged(WebKitWebView *webView, WebKitLoadEvent loadEvent, Brows
     GtkWidget *child = gtk_widget_get_first_child(GTK_WIDGET(tab));
     while (child) {
         GtkWidget *next = gtk_widget_get_next_sibling(child);
-        if (GTK_IS_INFO_BAR(child))
+        if (GTK_IS_INFO_BAR(child)) {
+            PermissionRequestData *requestData = (PermissionRequestData *)g_object_steal_data(G_OBJECT(child), "permission-request-data");
+            if (requestData) {
+                webkit_permission_request_deny(requestData->request);
+                permissionRequestDataFree(requestData);
+            }
             gtk_widget_unparent(child);
+        }
         child = next;
     }
 #else
@@ -241,6 +247,10 @@ static void tlsErrorsDialogResponse(GtkWidget *dialog, gint response, BrowserTab
         GTlsCertificate *certificate = (GTlsCertificate *)g_object_get_data(G_OBJECT(dialog), "certificate");
 #if SOUP_CHECK_VERSION(2, 91, 0)
         GUri *uri = g_uri_parse(failingURI, SOUP_HTTP_URI_FLAGS, NULL);
+        if (!uri) {
+            gtk_widget_unparent(dialog);
+            return;
+        }
 #if GTK_CHECK_VERSION(3, 98, 5)
         webkit_network_session_allow_tls_certificate_for_host(webkit_web_view_get_network_session(tab->webView), certificate, g_uri_get_host(uri));
 #else
@@ -289,8 +299,12 @@ static gboolean pointerLockMessageTimeoutCallback(BrowserTab *tab)
     return FALSE;
 }
 
-static void permissionRequestDialogResponse(GtkWidget *dialog, gint response, PermissionRequestData *requestData)
+static void permissionRequestDialogResponse(GtkWidget *dialog, gint response, gpointer userData)
 {
+    PermissionRequestData *requestData = (PermissionRequestData *)g_object_steal_data(G_OBJECT(dialog), "permission-request-data");
+    if (!requestData)
+        return;
+
     switch (response) {
     case GTK_RESPONSE_YES:
         if (WEBKIT_IS_USER_MEDIA_PERMISSION_REQUEST(requestData->request))
@@ -323,7 +337,7 @@ static void permissionRequestDialogResponse(GtkWidget *dialog, gint response, Pe
 #else
     gtk_widget_destroy(dialog);
 #endif
-    g_clear_pointer(&requestData, permissionRequestDataFree);
+    permissionRequestDataFree(requestData);
 }
 
 static const gchar *webKitXRSessionModeToString(WebKitXRSessionMode mode)
@@ -411,6 +425,7 @@ static gboolean decidePermissionRequest(WebKitWebView *webView, WebKitPermission
 
         tab->pointerLockMessageLabelId = g_timeout_add_seconds(2, (GSourceFunc)pointerLockMessageTimeoutCallback, tab);
         g_source_set_name_by_id(tab->pointerLockMessageLabelId, "[WebKit]pointerLockMessageTimeoutCallback");
+        webkit_permission_request_allow(request);
         return TRUE;
     } else if (WEBKIT_IS_WEBSITE_DATA_ACCESS_PERMISSION_REQUEST(request)) {
         title = "WebsiteData access request";
@@ -466,8 +481,9 @@ static gboolean decidePermissionRequest(WebKitWebView *webView, WebKitPermission
 
     GtkWidget *dialog = createInfoBarQuestionMessage(title, text);
     g_free(text);
-    g_signal_connect(dialog, "response", G_CALLBACK(permissionRequestDialogResponse), permissionRequestDataNew(request,
-        getWebViewOrigin(webView)));
+    g_object_set_data_full(G_OBJECT(dialog), "permission-request-data", permissionRequestDataNew(request,
+        getWebViewOrigin(webView)), (GDestroyNotify)permissionRequestDataFree);
+    g_signal_connect(dialog, "response", G_CALLBACK(permissionRequestDialogResponse), NULL);
 
 #if GTK_CHECK_VERSION(3, 98, 5)
     gtk_box_prepend(GTK_BOX(tab), dialog);

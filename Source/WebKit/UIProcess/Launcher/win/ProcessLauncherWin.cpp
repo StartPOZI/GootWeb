@@ -39,15 +39,15 @@ static LPCWSTR processName(ProcessLauncher::ProcessType processType)
 {
     switch (processType) {
     case ProcessLauncher::ProcessType::Web:
-        return L"WebKitWebProcess.exe";
+        return L"GootWebWebProcess.exe";
     case ProcessLauncher::ProcessType::Network:
-        return L"WebKitNetworkProcess.exe";
+        return L"GootWebNetworkProcess.exe";
 #if ENABLE(GPU_PROCESS)
     case ProcessLauncher::ProcessType::GPU:
-        return L"WebKitGPUProcess.exe";
+        return L"GootWebGPUProcess.exe";
 #endif
     }
-    return L"WebKitWebProcess.exe";
+    return L"GootWebWebProcess.exe";
 }
 
 void ProcessLauncher::launchProcess()

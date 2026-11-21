@@ -486,7 +486,7 @@ void WebKitBrowserWindow::didChangeTitle(const void* clientInfo)
     auto& thisWindow = toWebKitBrowserWindow(clientInfo);
     auto page = WKViewGetPage(thisWindow.m_view.get());
     WKRetainPtr<WKStringRef> title = adoptWK(WKPageCopyTitle(page));
-    std::wstring titleString = createString(title.get()) + L" [WebKit]";
+    std::wstring titleString = createString(title.get());
     SetWindowText(thisWindow.m_hMainWnd, titleString.c_str());
 }
 
@@ -515,15 +515,6 @@ void WebKitBrowserWindow::decidePolicyForNavigationResponse(WKPageRef, WKNavigat
 {
     auto& thisWindow = toWebKitBrowserWindow(clientInfo);
     auto response = adoptWK(WKNavigationResponseCopyResponse(navigationResponse));
-    auto code = WKURLResponseHTTPStatusCode(response.get());
-    auto expectedContentLength = WKURLResponseGetExpectedContentLength(response.get());
-    if (code > 300 && !expectedContentLength) {
-        std::wstringstream text;
-        text << L"Error Code: " << code << std::endl;
-        text << L"MIME type: " << createString(adoptWK(WKURLResponseCopyMIMEType(response.get())).get()) << std::endl;
-        text << L"URL: " << createString(adoptWK(WKURLResponseCopyURL(response.get())).get());
-        MessageBox(thisWindow.m_hMainWnd, text.str().c_str(), L"No Content", MB_OK | MB_ICONWARNING);
-    }
 
     auto isMainFrame = WKFrameInfoGetIsMainFrame(adoptWK(WKNavigationResponseCopyFrameInfo(navigationResponse)).get());
     if (WKNavigationResponseCanShowMIMEType(navigationResponse) || !isMainFrame)
@@ -624,7 +615,7 @@ void WebKitBrowserWindow::didReceiveAuthenticationChallenge(WKPageRef, WKAuthent
     auto decisionListener = WKAuthenticationChallengeGetDecisionListener(challenge);
     auto authenticationScheme = WKProtectionSpaceGetAuthenticationScheme(protectionSpace);
 
-    if (thisWindow.m_isControlledByAutomation) {
+    if (thisWindow.m_isControlledByAutomation && authenticationScheme != kWKProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested) {
         WKRetainPtr<WKStringRef> username = createWKString("accept server trust");
         WKRetainPtr<WKStringRef> password = createWKString("");
         WKRetainPtr<WKCredentialRef> wkCredential = adoptWK(WKCredentialCreate(username.get(), password.get(), kWKCredentialPersistenceForSession));
@@ -753,8 +744,10 @@ WKPageRef WebKitBrowserWindow::createNewPage(WKPageRef, WKPageConfigurationRef p
         return adoptRef(*new WebKitBrowserWindow(client, pageConf, mainWnd));
     };
     bool ok = newWindow.init(factory, hInst);
-    if (!ok)
+    if (!ok) {
+        newWindow.deref();
         return nullptr;
+    }
     ShowWindow(newWindow.hwnd(), SW_SHOW);
     auto& newBrowserWindow = *static_cast<WebKitBrowserWindow*>(newWindow.browserWindow());
     WKRetainPtr<WKPageRef> newPage = WKViewGetPage(newBrowserWindow.m_view.get());

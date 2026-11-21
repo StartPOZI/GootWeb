@@ -14,7 +14,7 @@ if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
     include(WebKitXcodeSDK)
 endif ()
 
-project(WebKit LANGUAGES C CXX)
+project(GootWeb LANGUAGES C CXX)
 
 # project() enables C and CXX; see WEBKIT_ENABLE_LANGUAGE for why this is reset.
 set(CMAKE_PCH_PROLOGUE "")

@@ -34,7 +34,7 @@ namespace WebCore {
 String standardUserAgent(const String& applicationName, const String& applicationVersion)
 {
     auto version = applicationName.isEmpty() ? emptyString() : applicationVersion;
-    return makeString("Mozilla/5.0 ("_s, windowsVersionForUAString(), ") AppleWebKit/605.1.15 (KHTML, like Gecko)"_s,
+    return makeString("Mozilla/5.0 ("_s, windowsVersionForUAString(), ") AppleWebKit/605.1.15 (KHTML, like Gecko) GootWeb/1.0"_s,
         applicationName.isEmpty() ? ""_s : " "_s, applicationName, version.isEmpty() ? ""_s : "/"_s, version);
 }
 

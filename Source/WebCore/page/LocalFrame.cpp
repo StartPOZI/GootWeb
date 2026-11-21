@@ -1458,9 +1458,16 @@ String LocalFrame::customNavigatorPlatform() const
 
 OptionSet<AdvancedPrivacyProtections> LocalFrame::advancedPrivacyProtections() const
 {
+    OptionSet<AdvancedPrivacyProtections> protections;
     if (auto* documentLoader = loader().activeDocumentLoader())
-        return documentLoader->advancedPrivacyProtections();
-    return { };
+        protections = documentLoader->advancedPrivacyProtections();
+
+    // GootWeb: fingerprinting and tracking protections are always enabled.
+    protections.add(AdvancedPrivacyProtections::ScriptTrackingPrivacy);
+    protections.add(AdvancedPrivacyProtections::FingerprintingProtections);
+    protections.add(AdvancedPrivacyProtections::OverrideHardwareConcurrency);
+    protections.add(AdvancedPrivacyProtections::LinkDecorationFiltering);
+    return protections;
 }
 
 bool LocalFrame::allowPrivacyProxy() const

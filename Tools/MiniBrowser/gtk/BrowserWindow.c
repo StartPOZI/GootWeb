@@ -73,7 +73,7 @@ struct _BrowserWindowClass {
     GtkApplicationWindowClass parent;
 };
 
-static const char *defaultWindowTitle = "WebKitGTK MiniBrowser";
+static const char *defaultWindowTitle = "GootWeb";
 static const gdouble minimumZoomLevel = 0.5;
 static const gdouble maximumZoomLevel = 3;
 static const gdouble defaultZoomLevel = 1;
@@ -825,7 +825,8 @@ static void openPrivateWindow(GSimpleAction *action, GVariant *parameter, gpoint
 
         webkit_network_session_set_tls_errors_policy(networkSession, webkit_network_session_get_tls_errors_policy(window->networkSession));
         // FIXME: we need public api to get proxy settings.
-    }
+    } else
+        networkSession = g_object_ref(window->networkSession);
 #endif
     WebKitWebView *newWebView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
         "web-context", webkit_web_view_get_context(webView),
@@ -1281,6 +1282,7 @@ static void browserWindowSwitchTab(GtkNotebook *notebook, BrowserTab *tab, guint
     WebKitWebView *webView = browser_tab_get_web_view(window->activeTab);
     if (webkit_web_view_is_editable(webView)) {
         browserWindowSetupEditorToolbar(window);
+        g_signal_handlers_disconnect_by_data(webkit_web_view_get_editor_state(webView), window);
         g_signal_connect(webkit_web_view_get_editor_state(webView), "notify::typing-attributes", G_CALLBACK(typingAttributesChanged), window);
     }
     webViewURIChanged(webView, NULL, window);
@@ -1309,9 +1311,6 @@ static void browserWindowSwitchTab(GtkNotebook *notebook, BrowserTab *tab, guint
     g_signal_connect_object(webView, "notify::camera-capture-state", G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
     g_signal_connect_object(webView, "notify::microphone-capture-state", G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
     g_signal_connect_object(webView, "notify::display-capture-state", G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
-
-    g_object_set(window->uriEntry, "secondary-icon-activatable", TRUE, NULL);
-    g_signal_connect(window->uriEntry, "icon-press", G_CALLBACK(webViewUriEntryIconPressed), window);
 
     WebKitBackForwardList *backForwardlist = webkit_web_view_get_back_forward_list(webView);
     browserWindowUpdateNavigationMenu(window, backForwardlist);
@@ -1444,6 +1443,8 @@ static void browser_window_init(BrowserWindow *window)
     gtk_widget_set_halign(window->uriEntry, GTK_ALIGN_FILL);
     gtk_widget_set_hexpand(window->uriEntry, TRUE);
     g_signal_connect_swapped(window->uriEntry, "activate", G_CALLBACK(activateUriEntryCallback), (gpointer)window);
+    g_object_set(window->uriEntry, "secondary-icon-activatable", TRUE, NULL);
+    g_signal_connect(window->uriEntry, "icon-press", G_CALLBACK(webViewUriEntryIconPressed), window);
     gtk_entry_set_icon_activatable(GTK_ENTRY(window->uriEntry), GTK_ENTRY_ICON_PRIMARY, FALSE);
     updateUriEntryIcon(window);
 #if GTK_CHECK_VERSION(3, 98, 5)

@@ -8,9 +8,9 @@ if (ENABLE_PDFJS)
 endif ()
 
 set(WebKit_OUTPUT_NAME webkit${WEBKITGTK_API_INFIX}gtk-${WEBKITGTK_API_VERSION})
-set(WebProcess_OUTPUT_NAME WebKitWebProcess)
-set(NetworkProcess_OUTPUT_NAME WebKitNetworkProcess)
-set(GPUProcess_OUTPUT_NAME WebKitGPUProcess)
+set(WebProcess_OUTPUT_NAME GootWebWebProcess)
+set(NetworkProcess_OUTPUT_NAME GootWebNetworkProcess)
+set(GPUProcess_OUTPUT_NAME GootWebGPUProcess)
 
 file(MAKE_DIRECTORY ${WebKitGTK_DERIVED_SOURCES_DIR}/webkit)
 file(MAKE_DIRECTORY ${WebKitGTK_FRAMEWORK_HEADERS_DIR})

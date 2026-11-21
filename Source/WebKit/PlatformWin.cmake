@@ -1,7 +1,7 @@
 set(WebKit_OUTPUT_NAME WebKit2)
-set(WebProcess_OUTPUT_NAME WebKitWebProcess)
-set(NetworkProcess_OUTPUT_NAME WebKitNetworkProcess)
-set(GPUProcess_OUTPUT_NAME WebKitGPUProcess)
+set(WebProcess_OUTPUT_NAME GootWebWebProcess)
+set(NetworkProcess_OUTPUT_NAME GootWebNetworkProcess)
+set(GPUProcess_OUTPUT_NAME GootWebGPUProcess)
 
 include(Headers.cmake)
 include(Platform/Curl.cmake)

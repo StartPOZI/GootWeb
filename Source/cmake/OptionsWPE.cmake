@@ -3,7 +3,7 @@ include(VersioningUtils)
 
 SET_PROJECT_VERSION(2 55 0)
 
-set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
+set(USER_AGENT_BRANDING "GootWeb/1.0" CACHE STRING "Branding to add to user agent string")
 
 set(ENABLE_UNSAFE_BUFFER_USAGE_WARNING ON)
 list(APPEND WEBKIT_UNSAFE_BUFFER_WARNING_FLAGS -Wno-unsafe-buffer-usage-in-format-attr-call)

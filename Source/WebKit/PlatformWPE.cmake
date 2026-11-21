@@ -13,9 +13,9 @@ if (ENABLE_PDFJS)
 endif ()
 
 set(WebKit_OUTPUT_NAME WPEWebKit-${WPE_API_VERSION})
-set(WebProcess_OUTPUT_NAME WPEWebProcess)
-set(NetworkProcess_OUTPUT_NAME WPENetworkProcess)
-set(GPUProcess_OUTPUT_NAME WPEGPUProcess)
+set(WebProcess_OUTPUT_NAME GootWebWebProcess)
+set(NetworkProcess_OUTPUT_NAME GootWebNetworkProcess)
+set(GPUProcess_OUTPUT_NAME GootWebGPUProcess)
 
 file(MAKE_DIRECTORY ${DERIVED_SOURCES_WPE_API_DIR})
 file(MAKE_DIRECTORY ${FORWARDING_HEADERS_WPE_DIR})

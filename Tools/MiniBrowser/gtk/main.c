@@ -46,6 +46,8 @@
 
 #define MINI_BROWSER_ERROR (miniBrowserErrorQuark())
 
+#define GOOTWEB_VERSION "1.0"
+
 static const gchar **uriArguments = NULL;
 static const gchar **ignoreHosts = NULL;
 static const gchar **userScriptsAtDocumentStart = NULL;
@@ -66,7 +68,7 @@ static const char *cookiesPolicy;
 static const char *proxy;
 static gboolean darkMode;
 static char* timeZone;
-static gboolean enableITP;
+static gboolean disableITP;
 static gboolean exitAfterLoad;
 static gboolean logInputMethod;
 static gboolean webProcessCrashed;
@@ -177,14 +179,14 @@ static const GOptionEntry commandLineOptions[] =
     { "content-filter", 0, 0, G_OPTION_ARG_FILENAME, &contentFilter, "JSON with content filtering rules", "FILE" },
     { "user-script-at-start", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &userScriptsAtDocumentStart, "Inject one or more user scripts at document start.", "PATH" },
     { "user-script-at-end", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &userScriptsAtDocumentEnd, "Inject one or more user scripts at document end.", "PATH" },
-    { "enable-itp", 0, 0, G_OPTION_ARG_NONE, &enableITP, "Enable Intelligent Tracking Prevention (ITP)", NULL },
+    { "disable-itp", 0, 0, G_OPTION_ARG_NONE, &disableITP, "Disable Intelligent Tracking Prevention (ITP)", NULL },
 #if !GTK_CHECK_VERSION(3, 98, 0)
     { "enable-sandbox", 0, 0, G_OPTION_ARG_NONE, &enableSandbox, "Enable web process sandbox support", NULL },
 #endif
     { "exit-after-load", 0, 0, G_OPTION_ARG_NONE, &exitAfterLoad, "Quit the browser after the load finishes", NULL },
-    { "log-input-method", 0, 0, G_OPTION_ARG_NONE, &logInputMethod, "Log what WebKit reports to the input method. Disables composition", NULL },
+    { "log-input-method", 0, 0, G_OPTION_ARG_NONE, &logInputMethod, "Log what the engine reports to the input method. Disables composition", NULL },
     { "time-zone", 't', 0, G_OPTION_ARG_STRING, &timeZone, "Set time zone", "TIMEZONE" },
-    { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the WebKitGTK version", NULL },
+    { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the GootWeb version", NULL },
     { "config", 'C', 0, G_OPTION_ARG_FILENAME, &configFile, "Path to a configuration file", "PATH" },
     { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &uriArguments, 0, "[URL…]" },
     { 0, 0, 0, 0, 0, 0, 0 }
@@ -385,7 +387,7 @@ static gboolean addSettingsGroupToContext(GOptionContext *context, WebKitSetting
         {
             .short_name = 'F',
             .long_name = "features",
-            .description = "Enable or disable WebKit features (hint: pass 'help' for a list)",
+            .description = "Enable or disable engine features (hint: pass 'help' for a list)",
             .arg = G_OPTION_ARG_CALLBACK,
             .arg_data = parseFeaturesOptionCallback,
             .arg_description = "FEATURE-LIST",
@@ -424,14 +426,24 @@ static void aboutDataRequestFree(AboutDataRequest *request)
     g_free(request);
 }
 
+static void aboutDataRequestViewDestroyed(WebKitWebView *webView, gpointer userData)
+{
+    if (aboutDataRequestMap)
+        g_hash_table_remove(aboutDataRequestMap, GUINT_TO_POINTER(webkit_web_view_get_page_id(webView)));
+}
+
 static AboutDataRequest* aboutDataRequestNew(WebKitURISchemeRequest *uriRequest)
 {
     if (!aboutDataRequestMap)
         aboutDataRequestMap = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)aboutDataRequestFree);
 
+    WebKitWebView *webView = webkit_uri_scheme_request_get_web_view(uriRequest);
+    if (!g_signal_handler_find(webView, G_SIGNAL_MATCH_FUNC, 0, 0, NULL, G_CALLBACK(aboutDataRequestViewDestroyed), NULL))
+        g_signal_connect(webView, "destroy", G_CALLBACK(aboutDataRequestViewDestroyed), NULL);
+
     AboutDataRequest *request = g_new0(AboutDataRequest, 1);
     request->request = g_object_ref(uriRequest);
-    g_hash_table_insert(aboutDataRequestMap, GUINT_TO_POINTER(webkit_web_view_get_page_id(webkit_uri_scheme_request_get_web_view(request->request))), request);
+    g_hash_table_insert(aboutDataRequestMap, GUINT_TO_POINTER(webkit_web_view_get_page_id(webView)), request);
 
     return request;
 }
@@ -660,7 +672,8 @@ static void aboutURISchemeRequestCallback(WebKitURISchemeRequest *request, gpoin
 
     path = webkit_uri_scheme_request_get_path(request);
     if (!g_strcmp0(path, "minibrowser")) {
-        contents = g_strdup_printf("<html><body><h1>WebKitGTK MiniBrowser</h1><p>The test browser of WebKitGTK</p><p>WebKit version: %d.%d.%d</p></body></html>",
+        contents = g_strdup_printf("<html><body><h1>GootWeb</h1><p>The browser engine of StartPOZI</p><p>GootWeb %s &mdash; engine: WebKit %d.%d.%d</p></body></html>",
+            GOOTWEB_VERSION,
             webkit_get_major_version(),
             webkit_get_minor_version(),
             webkit_get_micro_version());
@@ -830,7 +843,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
         networkSession = webkit_network_session_new(dataDirectory, cacheDirectory);
     }
 
-    webkit_network_session_set_itp_enabled(networkSession, enableITP);
+    webkit_network_session_set_itp_enabled(networkSession, !disableITP);
 
     if (!automationMode) {
         WebKitWebsiteDataManager *manager;
@@ -872,7 +885,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
         manager = webkit_website_data_manager_new("base-data-directory", dataDirectory, "base-cache-directory", cacheDirectory, NULL);
     }
 
-    webkit_website_data_manager_set_itp_enabled(manager, enableITP);
+    webkit_website_data_manager_set_itp_enabled(manager, !disableITP);
 
     if (proxy) {
         WebKitNetworkProxySettings *webkitProxySettings = webkit_network_proxy_settings_new(proxy, ignoreHosts);
@@ -1078,7 +1091,8 @@ int main(int argc, char *argv[])
     }
 
     if (printVersion) {
-        g_print("WebKitGTK %u.%u.%u",
+        g_print("GootWeb %s (WebKit %u.%u.%u)",
+            GOOTWEB_VERSION,
             webkit_get_major_version(),
             webkit_get_minor_version(),
             webkit_get_micro_version());
@@ -1090,7 +1104,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    GtkApplication *application = gtk_application_new("org.webkitgtk.MiniBrowser", G_APPLICATION_NON_UNIQUE);
+    GtkApplication *application = gtk_application_new("com.startpozi.GootWeb", G_APPLICATION_NON_UNIQUE);
     g_signal_connect(application, "startup", G_CALLBACK(startup), NULL);
     g_signal_connect(application, "activate", G_CALLBACK(activate), webkitSettings);
     g_application_run(G_APPLICATION(application), 0, NULL);
